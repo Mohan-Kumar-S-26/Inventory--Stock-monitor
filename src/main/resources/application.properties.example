@@ -1,0 +1,5 @@
+spring.datasource.url=jdbc:postgresql://localhost:5432/yourdb
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+mail.username=youremail@gmail.com
+mail.password=your_app_password
