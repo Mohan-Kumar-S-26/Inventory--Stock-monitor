@@ -3,12 +3,15 @@ package com.stockwatch.service;
 import com.stockwatch.model.Product;
 import com.stockwatch.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import jakarta.annotation.PreDestroy;
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -17,7 +20,8 @@ public class StockCheckerService {
     private final ProductRepository productRepo;
     private final ScraperService scraperService;
     private final EmailService emailService;
-
+    private final ExecutorService executorService =
+            Executors.newFixedThreadPool(10);
 
     @Scheduled(fixedDelayString = "${stockwatch.check-interval-ms:300000}")
     public void checkAllProducts() {
@@ -31,12 +35,21 @@ public class StockCheckerService {
         log.info("Checking {} active products...", activeProducts.size());
 
         for (Product product : activeProducts) {
-            checkProduct(product);
+            executorService.submit(() -> checkProduct(product));
         }
+
 
         log.info("Check cycle complete.");
     }
-
+    @PreDestroy
+    public void shutdown() {
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
     public void checkSingleProduct(Product product) {
         checkProduct(product);
     }
